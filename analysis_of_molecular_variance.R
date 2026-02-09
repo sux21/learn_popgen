@@ -123,4 +123,5 @@ print(SSD_tot == SSD_wp + SSD_apwg + SSD_ag) # equation 7
 
 
 # How to do it using general linear model?
-
+# How to do it with different different number of populations in each groups? 
+# Different number of individuals in each population?
