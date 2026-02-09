@@ -1,158 +1,126 @@
-# general linear model: Y = Xb + e
-# Y: actual values
-# Xb: predicted values
-# goal: find b such that || Y-Xb || is minimum. 
+# Excoffier L., Smouse PE., Quattro JM. 1992. 
+# Analysis of molecular variance inferred from metric distances 
+# among dna haplotypes: Application to human mitochondrial dna 
+# restriction data. Genetics 131:479–491. 
+# Available at: http://www.genetics.org/content/131/2/479.abstract
 
 
-# Analysis of molecular variance 
-# p_jig = p + a_g + b_ig + c_jig
-# g: group, i: population, j: individual
-# p_ijg: observed values
-# p: mean
-# a_g: group effect
-# b_ig: population effect
-# c_jig: individuals effect
-
-
-# How p_jig = p + a_g + b_ig + c_jig relates to Y = Xb + e?
-# p_jig forms the vector Y
-# coefficients of p, a_g, b_ig form matrix X
-# p, all a_g, all b_ig form marix b
-# c_jig forms the vector e
-
-
+# The main goal is to illustrate how to manually perform analysis of molecular variance
 
 library(dplyr)
 
-
-
-
-# simulaion
+# Simulation 
 
 # parameters
 num_ind <- 4 # number of individuals in each population (assume each population has same number of individuals)
 num_pop <- 3 # number of populations in each group (assume each group has same number of populations)
-num_grp <- 2 # number of groups
-lambda <- 10 # mean of Poisson distribution
+num_grp <- 1 # number of groups
+num_sit <- 10 # number of restriction sites
+
+tot_ind <- num_ind*num_pop*num_grp # total number of individuals
+
+# simulate a haplotype for each individual
+hap_dat <- vector("list", tot_ind)
 
 set.seed(1234)
+rand_seeds <- sample(1000:2000, tot_ind, replace = FALSE)
 
-sim <- tibble(group = factor(rep(1:num_grp, each = num_pop*num_ind)) 
-              , pop = factor(rep(1:num_pop, each = num_ind, times = num_grp))
-              , p = rpois(num_grp*num_pop*num_ind, lambda)
-)
-print(sim)
-
-means <- summarise(sim, 
-          mean = mean(p),
-          .by = c(group, pop)
-)
-
-tot_ind <- nrow(sim) # total number of individuals
-grand_mean <- mean(sim$p) # mean of all individuals
-
-
-# Calculate SSD(total)
-SS_tot <- (sim$p - grand_mean)^2 |> sum() # sum of squares (total) 
-
-# Calculate SSD(WP)
-for (g in 1:num_grp) {
-  for (i in 1:num_pop) {
-    sim_sub <- subset(sim, group == g & pop == i)
-    means_sub <- subset(means, group == g & pop == i)
-    
-    val <- sim_sub$p
-    m <- means_sub$mean
-    
-    ss <- (val-m)^2 |> sum()
-    print(ss)
-   # SS_wp <- SS_wp + ss
-  }
+for (i in 1:tot_ind) {
+  set.seed(rand_seeds[i])
+  hap_dat[[i]] <- sample(c(0,1), num_sit, replace = TRUE, prob = c(0.5, 0.5))
 }
 
-# calculate SSD(AP/WG)
-grp <- levels(sim$group)
-pop <- levels(sim$pop)
+# group information for each individual
+grp_info <- data.frame(ind = seq(tot_ind)
+                       , group = factor(rep(1:num_grp
+                                            , each = num_pop*num_ind)) 
+                       , pop = factor(rep(1:num_pop
+                                          , each = num_ind
+                                          , times = num_grp)
+                       )
+)
 
-for (g in seq_along(grp)) {
-  for (i in seq_along(pop)) {
-    for (ii in seq_along(pop)[-i]) {
-      sim_sub <- subset(sim, group == g & pop == i)
-      means_sub <- subset(means, group == g & pop == ii)
-      
-      val <- sim_sub$p
-      m <- means_sub$mean
-      
-      ss <- (val-m)^2 |> sum()
-      print(ss)
-    }
+
+# Calculate Euclidean distance between each pair of haplotypes
+# Set weight matrix W to identity matrix
+
+hap_pairs <- expand.grid(grp_info$ind, grp_info$ind)
+
+d2 <- vector("list", nrow(hap_pairs))
+
+for (i in seq_along(hap_pairs$Var1)) {
+  j <- hap_pairs[i,"Var1"]
+  k <- hap_pairs[i,"Var2"]
+  
+  pj <- hap_dat[[j]]
+  pk <- hap_dat[[k]]
+  
+  d2[[i]] <- (pj - pk) %*% (pj - pk) # equation 3a
+}
+
+d2_dat <- ( hap_pairs 
+            |> mutate(d2 = unlist(d2)) 
+            |> rename(ind1 = Var1, ind2 = Var2)
+            |> left_join(grp_info, by = join_by(ind1 == ind))
+            |> rename(group1 = group, pop1 = pop)
+            |> left_join(grp_info, by = join_by(ind2 == ind))
+            |> rename(group2 = group, pop2 = pop)
+            )
+
+# Calculate SSD(total)
+SSD_tot <- sum(d2_dat$d2)/(2*tot_ind) # equation 5b
+print(SSD_tot)
+
+# Calculate SSD(within populations), equation 8a
+SSD_wp <- 0
+
+for (g in 1:num_grp) {
+  d2_grp <- subset(d2_dat, group1 == g & group2 == g) # both haplotypes in same group
+  for (i in 1:num_pop) {
+    d2_pop <- subset(d2_grp, pop1 == i & pop2 == i) # both haplotypes in same population
+    N_pop <-  length(unique(d2_pop$ind1)) # number of haplotypes in a pop
+    
+    current_sum <- sum(d2_pop$d2)/(2*N_pop)
+    SSD_wp <- SSD_wp + current_sum
   }
-} 
+}
+print(SSD_wp)
 
-# 
-# 
-# print(sim
-#       |> summarize(m = mean(d2), .by=c(group, pop))
-# )
-# 
-# 
-# 
-# fit.aov <- aov(p ~ group + pop, data = sim)
-# summary(fit.aov)
-# 
-# 
-# model <- (lm(p ~ group+pop, data = sim))
-# print(model)
-# summary(model)
-# 
-# ## predict(m)
-# dat <- (dat
-#         |> mutate(
-#           fit = predict(m)
-#           , resid=val-fit
-#         )
-# )
-# 
-# dat <- summarize(dat,
-#                  sP=var(val)
-#                  , sG = var(fit)
-#                  , sI = var(resid)
-# )
-# print(dat)
-# 
-# quit()
-# summary(m)
-# anova(m)
-# car::Anova(m)
-# 
-# ## Explore residuals and variance
-# 
-# # this may be interesting to repeat the analysis in the article
-# # Table 2 data
-# region <- c("Asia", "West_Africa", "America", "Europe", "Middle_East")
-# num_region <- length(region)
-# 
-# pop <- c("Tharu", "Oriental", "Wolof", "Peul", "Pima", "Maya", "Finnish",
-#          "Sicilian", "Israeli_Jews", "Israeli_Arabs")
-# num_pop <- length(pop)
-# 
-# geo_dat <- data.frame(region = rep(region, each = 2)
-#                       , pop = pop)
-# 
-# hap <- c(1, 2, 6, 7, 8, 9, 
-#          10, 11, 12, 13, 17, 18, 
-#          21, 22, 23, 27, 28, 29, 
-#          31, 34, 36, 37, 38, 39, 
-#          40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 
-#          50, 51, 52, 53, 54, 56, 57, 
-#          64, 65, 66, 67, 68, 69, 
-#          71, 72, 73, 75, 76, 77, 
-#          82, 83, 
-#          95)
-# num_hap <- length(hap)
-# 
-# as.vector(sapply(c(1,2,3,4,5), rep, 10))
-# 
-# hap_dat <- data.frame(hap = c(rep(1, 10), 
-# )
-# fre = c(),)
+# Calculate SSD(among populations/within groups), equation 8b
+SSD_apwg <- 0
+
+for (g in 1:num_grp) {
+  d2_grp <- subset(d2_dat, group1 == g) # both haplotypes in same group
+  N_grp <- length(unique(d2_grp$ind1))
+  
+  pop_tot <- 0
+  for (i in 1:num_pop) {
+    d2_pop <- subset(d2_grp, pop1 == i & pop2 == i)
+    N_pop <-  length(unique(d2_pop$ind1))
+    
+    pop_sum <- sum(d2_pop$d2)/(2*N_pop)
+    pop_tot <- pop_tot + pop_sum
+  }
+  grp_sum <- sum(d2_grp$d2)/(2*N_grp) # 2 haplotypes can in any populations
+  
+  SSD_apwg <- SSD_apwg + (grp_sum - pop_tot)
+}
+print(SSD_apwg)
+
+# Calculate SSD(among groups), equation 8c
+for (g in 1:num_grp) {
+  d2_grp <- subset(d2_dat, group1 == g) # both haplotypes in same group
+  N_grp <- length(unique(d2_grp$ind1))
+  
+  grp_sum <- sum(d2_grp$d2)/(2*N_grp)
+}
+SSD_ag <- SSD_tot - grp_sum
+print(SSD_ag)
+
+# Show sum of squares add up to total sum of squares
+print(SSD_tot == SSD_wp + SSD_apwg + SSD_ag) # equation 7
+
+
+
+# How to do it using general linear model?
+
