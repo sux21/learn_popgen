@@ -14,7 +14,7 @@ library(dplyr)
 # parameters
 num_ind <- 4 # number of individuals in each population (assume each population has same number of individuals)
 num_pop <- 3 # number of populations in each group (assume each group has same number of populations)
-num_grp <- 1 # number of groups
+num_grp <- 2 # number of groups
 num_sit <- 10 # number of restriction sites
 
 tot_ind <- num_ind*num_pop*num_grp # total number of individuals
