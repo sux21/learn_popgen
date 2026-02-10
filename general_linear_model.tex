@@ -1,0 +1,245 @@
+\documentclass[12pt]{article}
+\title{General Linear Model}
+\author{Xingyuan Su}
+\date{\today}
+
+\usepackage{amsmath}
+
+\setlength{\parindent}{0pt} % don't indent the line
+\begin{document}
+
+\maketitle
+
+\section{Expression}
+
+General linear model is expressed as:
+
+\begin{equation*}
+    \boldsymbol{Y} = \boldsymbol{X}\boldsymbol{\beta} + \boldsymbol{\epsilon}
+\end{equation*}
+
+The matrix form of the equation:
+
+\[    
+\begin{bmatrix} 
+    Y_1 \\ 
+    Y_2 \\ 
+    Y_3 \\ 
+    \vdots \\
+    Y_n
+\end{bmatrix}_{n \times 1}
+= 
+\begin{bmatrix}
+    x_{11} & x_{12} & x_{13} & \cdots & x_{1p} \\
+    x_{21} & x_{22} & x_{23} & \cdots & x_{2p} \\
+    x_{31} & x_{32} & x_{33} & \cdots & x_{3p} \\
+    \vdots & \vdots & \vdots & \ddots & \vdots \\
+    x_{n1} & x_{n2} & x_{n3} & \cdots & x_{np}
+\end{bmatrix}_{n \times p}
+\begin{bmatrix}
+    \beta_1 \\
+    \beta_2 \\
+    \beta_3 \\
+    \vdots \\
+    \beta_p 
+\end{bmatrix}_{p \times 1}
++ 
+\begin{bmatrix}
+    \epsilon_1 \\
+    \epsilon_2 \\
+    \epsilon_3 \\
+    \vdots \\
+    \epsilon_n
+\end{bmatrix}_{n \times 1}
+\]
+
+The goal of general linear model is to find $\boldsymbol{\beta}$ that minimizes 
+the distance between $\boldsymbol{Y}$ and $\boldsymbol{X\beta}$. 
+
+\section{Least Squares Estimate of $\boldsymbol{\beta}$}
+\begin{equation*}
+	\boldsymbol{\beta} = (\boldsymbol{X^T}\boldsymbol{X})^{-1}\boldsymbol{X}\boldsymbol{Y}
+\end{equation*}
+
+\section{Examples}
+Consider a system of equations:
+
+\begin{align*}
+        p_{11} &= p + b_{1} + \epsilon \\
+        p_{12} &= p + b_{1} + \epsilon \\
+        p_{21} &= p + b_{2} + \epsilon \\
+        p_{22} &= p + b_{2} + \epsilon
+\end{align*}
+
+Express it in matrix form:
+
+\[
+\underbrace{
+\begin{bmatrix}
+    p_{11} \\
+    p_{12} \\
+    p_{21} \\
+    p_{22}
+\end{bmatrix}
+}_\text{observed values}
+= 
+\underbrace{
+\begin{bmatrix}
+    1 & 1 & 0 \\
+    1 & 1 & 0 \\
+    1 & 0 & 1 \\
+    1 & 0 & 1 \\
+\end{bmatrix} 
+}_\text{a matrix with linear dependent columns}
+\begin{bmatrix}
+    p \\
+    b_1 \\
+    b_2
+\end{bmatrix}
++ 
+\begin{bmatrix}
+    \epsilon_1 \\
+    \epsilon_2 \\
+    \epsilon_3 \\
+    \epsilon_4
+\end{bmatrix}
+\]
+
+The matrix with 1 and 0 is used to form the X matrix in general linear model by removing redundant columns. \\
+
+For example, remove the third column, X matrix is
+\[
+\boldsymbol{X}
+=
+\begin{bmatrix}
+	1 & 0 \\
+	1 & 0 \\
+   1 & 1 \\
+	\underbrace{1}_{\text{intercept}} & 1 \\
+\end{bmatrix}
+\]
+The column with all 1 is called the intercept. \\
+
+Or, remove the first column, X matrix is
+\[
+\boldsymbol{X} =
+\begin{bmatrix}
+	1 & 0 \\
+	1 & 0 \\
+	0 & 1 \\
+	0 & 1 \\
+\end{bmatrix}
+\]
+
+The two X matrices are row equivalent. \\ 
+
+New X matrices can also be obtained using elementary row operations. \\
+
+For example, 
+
+\begin{equation*}
+\begin{bmatrix}
+	1 & 0 \\
+	1 & 0 \\
+	0 & 1 \\
+	0 & 1 
+\end{bmatrix}
+\xrightarrow{\text{$R1 \rightarrow R1-R3$}}
+\begin{bmatrix}
+	1 & -1 \\
+	1 & 0 \\
+	0 & 1 \\
+	0 & 1 
+\end{bmatrix}
+\xrightarrow{\text{$R2 \rightarrow R2-R3$}}
+\begin{bmatrix}
+	1 & -1 \\
+	1 & -1 \\
+	0 & 1 \\
+	0 & 1 
+\end{bmatrix}
+\xrightarrow[\text{$R4 \rightarrow R4 \times 2$}]{\text{$R3 \rightarrow R3 \times 2$}}
+\begin{bmatrix}
+	1 & -1 \\
+	1 & -1 \\
+	0 & 2 \\
+	0 & 2
+\end{bmatrix}
+\end{equation*}
+
+\begin{equation*}
+\xrightarrow[\text{$R4 \rightarrow R4+R2$}]{\text{$R3 \rightarrow R3+R1$}}
+\begin{bmatrix}
+	1 & -1 \\
+	1 & -1 \\
+	1 & 1 \\
+	1 & 1
+\end{bmatrix}
+\end{equation*}
+
+The new X matrix is $\begin{bmatrix}
+	1 & -1 \\
+	1 & -1 \\
+	1 & 1 \\
+	1 & 1
+\end{bmatrix}$. \\
+
+Different X matrices give different equations: 
+
+\[
+\underbrace{
+\begin{bmatrix}
+	1 & 0 \\
+	1 & 0 \\
+   1 & 1 \\
+   1 & 1 \\
+\end{bmatrix}
+}_\text{$\boldsymbol{X}$}
+\underbrace{
+\begin{bmatrix}
+	p_1 \\
+ 	p_2 - p_1
+\end{bmatrix}
+}_\text{$\boldsymbol{\beta}$}
+= 
+\underbrace{
+\begin{bmatrix}
+	p_1 \\
+	p_1 \\
+	p_2 \\
+   p_2
+\end{bmatrix}
+}_\text{predicted values}
+\]
+
+\[
+\underbrace{
+\begin{bmatrix}
+	1 & 0 \\
+	1 & 0 \\
+	0 & 1 \\
+   0 & 1 \\
+\end{bmatrix}
+}_\text{$\boldsymbol{X}$}
+\underbrace{
+\begin{bmatrix}
+	p_1 \\
+	p_2
+\end{bmatrix}
+}_\text{$\boldsymbol{\beta}$}
+= 
+\underbrace{
+\begin{bmatrix}
+	p_1 \\
+	p_1 \\
+	p_2 \\
+	p_2
+\end{bmatrix}
+}_\text{predicted values}
+\]
+
+Note that different X matrices have different $\boldsymbol{\beta}$ vector. But they have the same predicted values.\\
+
+
+Choosing an X matrix is called \textbf{contrast}.
+\end{document}
